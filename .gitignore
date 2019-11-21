@@ -7,3 +7,4 @@ swigger.sh
 build
 cosmo_pol/radar/pyart_wrapper.py
 cosmo_pol/radar/small_radar_db.py
+*.lut
