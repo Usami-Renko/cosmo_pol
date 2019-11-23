@@ -132,8 +132,6 @@ def get_interpolated_radial(dic_variables, azimuth, elevation, N = None,
     else:
         SPACEBORNE = False
 
-    list_variables = dic_variables.values()
-    keys = dic_variables.keys()
 
     if integration_scheme == 2 and N == None:
         msg = """
