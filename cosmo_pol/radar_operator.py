@@ -19,6 +19,7 @@ import multiprocess as mp
 import numpy as np
 import copy
 import pycosmo as pc
+import pyWRF as pw
 import gc
 from textwrap import dedent
 
@@ -75,9 +76,8 @@ class RadarOperator(object):
         self.dic_vars = None
         self.N = 0 # atmospheric refractivity
 
-        self.config = cfg.CONFIG
         self.lut_sz = None
-
+        self.config = cfg.CONFIG
 
         if output_variables in ['all','only_model','only_radar']:
             self.output_variables = output_variables
@@ -168,6 +168,8 @@ class RadarOperator(object):
         has_melting = self.config['microphysics']['with_melting']
         scattering_method = self.config['microphysics']['scattering']
         freq = self.config['radar']['frequency']
+        folder_lut = self.config['microphysics']['folder_lut']
+
         list_hydrom = ['R','S','G']
         if micro_scheme == '2mom':
             list_hydrom.extend(['H'])
@@ -177,7 +179,7 @@ class RadarOperator(object):
             list_hydrom.extend(['I'])
 
 
-        lut = load_all_lut(micro_scheme, list_hydrom, freq, scattering_method)
+        lut = load_all_lut(micro_scheme, list_hydrom, freq, scattering_method, folder_lut=folder_lut)
 
         self.lut_sz = lut
 
@@ -276,7 +278,6 @@ class RadarOperator(object):
 
         elif base_vars_ok and not two_mom_vars_ok:
             print('Using 1-moment scheme')
-            self.config['microphysics']['scheme'] = '1mom'
             self.current_microphys_scheme = '1mom'
         elif base_vars_ok and two_mom_vars_ok:
             vars_to_load.extend(BASE_VARIABLES_2MOM)
@@ -290,6 +291,81 @@ class RadarOperator(object):
         loaded_vars = file_h.get_variable(vars_to_load,get_proj_info=True,
                                           shared_heights=False,assign_heights=True,
                                           cfile_name=cfilename)
+        self.dic_vars = loaded_vars #  Assign to class
+        if 'N' in loaded_vars.keys():
+            self.N=loaded_vars['N']
+            self.dic_vars.pop('N',None) # Remove N from the variable dictionnary (we won't need it there)
+        file_h.close()
+        gc.collect()
+        print('-------done------')
+
+        # Check if lookup tables are deprecated
+        if not self.output_variables == 'model_only':
+            if not self.lut_sz or \
+                self.current_microphys_scheme != \
+                    self.config['microphysics']['scheme']:
+                print('Loading lookup-tables for current specification')
+                self.set_lut()
+                self.config['microphysics']['scheme'] = self.current_microphys_scheme
+        del loaded_vars
+    
+    def load_model_file_WRF(self, filename, itime=0):
+        '''
+        Loads data from a WRF file, which is a pre-requirement for
+        simulating radar observables
+
+        Args:
+            filename: the name of the WRF netCDF file
+        '''
+
+        file_h = pw.open_file(filename)
+        vars_to_load = copy.deepcopy(BASE_VARIABLES)
+
+        vars_ok = file_h.check_if_variables_in_file(['P','T','QV','QR','QC','QI','QS','QG','U','V','W'])
+
+        if self.config['refraction']['scheme'] == 2:
+            if file_h.check_if_variables_in_file(['T','P','QV']):
+                vars_to_load.extend('N')
+            else:
+                msg = '''
+                Necessary variables for computation of atm. refractivity:
+                Pressure, Water vapour mass density and temperature
+                were not found in file. Using 4/3 method instead.
+                '''
+                print(dedent(msg))
+                self.config['refraction_method']='4/3'
+
+        # Currently disable the correction of turbulence broadening for WRF 
+
+        if self.config['doppler']['scheme'] == 3 and \
+            self.config['doppler']['turbulence_correction'] == 1:
+                msg = '''
+                Necessary variable for correction of turbulence broadening:
+                Eddy dissipitation rate
+                was not supported by WRF model.
+                '''
+                print(dedent(msg))
+                self.config['doppler']['turbulence_correction']=False
+
+        if not vars_ok:
+            msg = '''
+            Not all necessary variables could be found in file
+            For 1-moment scheme, the WRF file must contain
+            Temperature, Pressure, U-wind component, V-wind component,
+            W-wind component, and mass-densities (Q) for Vapour, Rain, Snow,
+            Graupel, Ice cloud
+            '''
+            raise ValueError(dedent(msg))
+        else:
+            print('Using 1-moment scheme')
+            self.current_microphys_scheme = '1mom'
+        
+        # Read variables from GRIB file
+        print('Reading variables ' + str(vars_to_load) + ' from file')
+
+        loaded_vars = file_h.get_variable(vars_to_load, itime=itime, get_proj_info=True,
+                                          shared_heights=False,assign_heights=True)
+        
         self.dic_vars = loaded_vars #  Assign to class
         if 'N' in loaded_vars.keys():
             self.N=loaded_vars['N']

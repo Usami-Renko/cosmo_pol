@@ -24,7 +24,7 @@ import pickle
 from io import BytesIO
 from textwrap import dedent
 
-def load_all_lut(scheme, list_hydrom, frequency, scattering_method):
+def load_all_lut(scheme, list_hydrom, frequency, scattering_method, folder_lut=None):
     '''
     Loads all scattering lookup tables for the user specified parameters
     Args:
@@ -37,6 +37,7 @@ def load_all_lut(scheme, list_hydrom, frequency, scattering_method):
         scattering_method: the scattering method that is used, can be either
             'tmatrix', 'tmatrix_masc' or 'dda', which correspond to subfolders
             in the lookup folder. You could add more...
+        folder_lut: The folder that contains lookup table
 
     Returns:
         lut_sz: dictionary containing the lookup table for every hydrometeor
@@ -45,26 +46,23 @@ def load_all_lut(scheme, list_hydrom, frequency, scattering_method):
     '''
 
     # Get current directory
-    folder_lut = os.path.dirname(os.path.realpath(__file__))+'/'
+    if folder_lut is None:
+        folder_lut = os.path.dirname(os.path.realpath(__file__))+'/'
     lut_sz = {}
 
-    default_lut = folder_lut +'/lut_tmatrix_masc/'
     if scattering_method == 'tmatrix':
-        folder_lut = folder_lut +'/lut_tmatrix/'
+        folder_lut = folder_lut + 'tmatrix/'
     elif scattering_method == 'tmatrix_masc':
-        folder_lut = folder_lut +'/lut_tmatrix_masc/'
+        folder_lut = folder_lut + 'tmatrix_masc/'
     elif scattering_method == 'dda':
-        folder_lut = folder_lut +'/lut_dda/'
+        folder_lut = folder_lut +'dda/'
 
     for h in list_hydrom:
         freq_str = str(frequency).replace('.','_')
         name = 'lut_SZ_' + h + '_' + freq_str + '_' + scheme + '.lut'
         print(folder_lut + name)
         try:
-            if scattering_method == 'dda' and h in ['R','H']:
-                lut_sz[h] = load_lut(default_lut + name)
-            else:
-                lut_sz[h] = load_lut(folder_lut + name)
+            lut_sz[h] = load_lut(folder_lut + name)
         except:
             raise
             msg = """

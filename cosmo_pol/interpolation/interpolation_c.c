@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-float* get_all_radar_pts(float *output, int len, float *coords_rad_pts, int crp_x, int crp_y, float *radar_heights, int rh_x, float *model_data, int md_x, int md_y, int md_z, float *model_heights, int mh_x, int mh_y, int mh_z, float *llc_cosmo, int llc_cosmo_x, float *res_cosmo, int res_cosmo_x);
+float* get_all_radar_pts(float *output, int len, float *coords_rad_pts, int crp_x, int crp_y, float *radar_heights, int rh_x, float *model_data, int md_x, int md_y, int md_z, float *model_heights, int mh_x, int mh_y, int mh_z, float *model_topo, int mt_x, int mt_y, float *llc_cosmo, int llc_cosmo_x, float *res_cosmo, int res_cosmo_x);
 int binary_search(float *arr, int dim, float key);
 float trilinear_interp(float *c_n, int c_n_x, float *v_n, int v_n_x, float *pos_radar, int p_r_x, float radar_bin_height);
 
-float* get_all_radar_pts(float *output, int len, float *coords_rad_pts, int crp_x, int crp_y, float *radar_heights, int rh_x, float *model_data, int md_x, int md_y, int md_z, float *model_heights, int mh_x, int mh_y, int mh_z, float *llc_cosmo, int llc_cosmo_x, float *res_cosmo, int res_cosmo_x){
+float* get_all_radar_pts(float *output, int len, float *coords_rad_pts, int crp_x, int crp_y, float *radar_heights, int rh_x, float *model_data, int md_x, int md_y, int md_z, float *model_heights, int mh_x, int mh_y, int mh_z, float *model_topo, int mt_x, int mt_y, float *llc_cosmo, int llc_cosmo_x, float *res_cosmo, int res_cosmo_x){
     
  float radar_pts[crp_x];
  int i=0;
@@ -56,49 +56,50 @@ float* get_all_radar_pts(float *output, int len, float *coords_rad_pts, int crp_
     diff_x=1.0-x;
     diff_y=1.0-y;   
     for(k=0;k<4;k++){
-	v[k]=model_heights[(mh_x-1)*mh_y*mh_z+neighb[k][0]*mh_z+neighb[k][1]];
+	    v[k]=model_topo[neighb[k][0]*mt_y+neighb[k][1]];
     }
     interp_topo=diff_x*diff_y*v[0]+x*v[2]*diff_y+diff_x*v[1]*y+x*y*v[3];
     if(interp_topo<radar_heights[i]){
-    for(j=0;j<4;j++){
-	int n[2]={neighb[j][0],neighb[j][1]};
-	slice_vert[mh_x];
-	for(k=0;k<mh_x;k++){
-		slice_vert[k]=model_heights[k*mh_y*mh_z+n[0]*mh_z+n[1]];
-	    }
-	idx=binary_search(slice_vert, mh_x,radar_heights[i]);
-	if(idx==-1){ /* In this case one of the points is above COSMO domain*/
-	    flag=2;
-	    break;
-	}
-	if(idx==-2){ /* One of the neighbour points is below topo, so we extrapolate to the height of the radar point */
-	    closest_1=mh_x-3;
-	    closest_2=mh_x-2;
-	}
-	else{
-	if(idx==(mh_x-2)){idx--;}
-	closest_1=idx;
-	closest_2=idx+1;
-	}
-	/*  printf("%d %d \n", n[0],n[1]);*/
-	coords_neighbours[2*j]=slice_vert[closest_1];
-	coords_neighbours[2*j+1]=slice_vert[closest_2];
-	val_neighbours[2*j]=model_data[closest_1*md_z*md_y+n[0]*md_z+n[1]];
-	/* printf("%f %f \n",coords_neighbours[2*j], val_neighbours[2*j]); */
-	val_neighbours[2*j+1]=model_data[closest_2*md_z*md_y+n[0]*md_z+n[1]];
+        for(j=0;j<4;j++){
+            int n[2]={neighb[j][0],neighb[j][1]};
+            slice_vert[mh_x];
+            for(k=0;k<mh_x;k++){
+                slice_vert[k]=model_heights[k*mh_y*mh_z+n[0]*mh_z+n[1]];
+            }
+            idx=binary_search(slice_vert, mh_x,radar_heights[i]);
+            if(idx==-1){ /* In this case one of the points is above COSMO domain*/
+                flag=2;
+                break;
+            }
+            if(idx==-2){ /* One of the neighbour points is below topo, so we extrapolate to the height of the radar point */
+                closest_1=mh_x-2;
+                closest_2=mh_x-1;
+            }
+            else{
+                if(idx==(mh_x-2)){idx--;}
+                closest_1=idx;
+                closest_2=idx+1;
+            }
+            /*  printf("%d %d \n", n[0],n[1]);*/
+            coords_neighbours[2*j]=slice_vert[closest_1];
+            coords_neighbours[2*j+1]=slice_vert[closest_2];
+            val_neighbours[2*j]=model_data[closest_1*md_z*md_y+n[0]*md_z+n[1]];
+            /* printf("%f %f \n",coords_neighbours[2*j], val_neighbours[2*j]); */
+            val_neighbours[2*j+1]=model_data[closest_2*md_z*md_y+n[0]*md_z+n[1]];
+        }
 
-	}
-
-    if(flag==2){ /* We hit the top of COSMO domain */
-	for(k=i;k<crp_x;k++){output[k]=-9999;}
-    }
-    else{ /* Everything is fine */
-	output[i]=trilinear_interp(coords_neighbours,8,val_neighbours,8,pos_radar_bin,2, radar_heights[i]);
-	/* printf("output  = %f \n",output[i]);*/
-    }
+        if(flag==2){ /* We hit the top of COSMO domain */
+            for(k=i;k<crp_x;k++){output[k]=-9999;}
+            break;
+        }
+        else{ /* Everything is fine */
+            output[i]=trilinear_interp(coords_neighbours,8,val_neighbours,8,pos_radar_bin,2, radar_heights[i]);
+        /* printf("output  = %f \n",output[i]);*/
+        }
     }
     else{  /* We hit a mountain, all neighbour points are below topo */
-	for(k=i;k<crp_x;k++){output[k]=0.0/0.0;}
+	    for(k=i;k<crp_x;k++){output[k]=0.0/0.0;}
+        break;
     }
  }
 return output;}

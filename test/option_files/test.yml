@@ -1,0 +1,31 @@
+radar:
+    type: 'ground'
+    coords: [25.04, 121.52, 40]
+    frequency: 5.6
+    range: 150000
+    radial_resolution: 150
+    PRI: 700
+    FFT_length: 128
+    sensitivity: [-15,10000]
+    3dB_beamwidth: 1.
+    K_squared: 0.93
+    nyquist_velocity: './option_files/nyquist_swiss_radars.txt'
+    antenna_speed: 0.2
+refraction:
+    scheme: 1
+integration:
+    scheme: 1
+    nh_GH: 1
+    nv_GH: 1
+    weight_threshold: 0.999
+doppler:
+    scheme: 2
+    turbulence_correction: 0
+    motion_correction: 0
+microphysics:
+    scheme: '1mom'
+    with_melting: 0
+    with_ice_crystals: 1
+    with_attenuation: 1
+    scattering: 'tmatrix_masc'
+    folder_lut: '../pathos/lut/'

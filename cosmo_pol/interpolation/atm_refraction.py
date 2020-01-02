@@ -15,6 +15,7 @@ __email__ = "daniel.wolfensberger@epfl.ch"
 import numpy as np
 np.seterr(divide='ignore') # Disable divide by zero error
 import pycosmo as pc
+import pyWRF as pw
 from scipy.interpolate import interp1d
 from scipy.integrate import odeint
 
@@ -76,7 +77,7 @@ def _deriv_z(z, r, n_h_int, dn_dh_int, RE):
     return [u, (-u ** 2 * ((1./n) * dn_dh + 1./ (RE + h)) +
                 ((1. / n) * dn_dh + 1. / (RE + h)))]
 
-def _ref_ODE(range_vec, elevation_angle, coords_radar, N):
+def _ref_ODE(range_vec, elevation_angle, coords_radar, N, model='WRF'):
     '''
     Computes the trajectory of a radar beam along a specified radial with the
     ODE method of Zeng and Blahak (2014)
@@ -86,6 +87,7 @@ def _ref_ODE(range_vec, elevation_angle, coords_radar, N):
         coord_radar: radar coordinates as 3D tuple [lat, lon, alt], ex
             [47.35, 12.3, 682]
         N: atmospheric refractivity as a COSMO variable
+        model: COSMO or WRF
 
     Returns:
         s: vector of distance at the ground along the radial [m]
@@ -95,19 +97,32 @@ def _ref_ODE(range_vec, elevation_angle, coords_radar, N):
 
     from cosmo_pol.config.cfg import CONFIG
 
-    # Get info about COSMO coordinate system
-    proj_COSMO = N.attributes['proj_info']
-    # Convert WGS84 coordinates to COSMO rotated pole coordinates
-    coords_rad_in_COSMO = pc.WGS_to_COSMO(coords_radar,
-                              [proj_COSMO['Latitude_of_southern_pole'],
-                               proj_COSMO['Longitude_of_southern_pole']])
+    if model == 'COSMO':
+        # Get info about COSMO coordinate system
+        proj_COSMO = N.attributes['proj_info']
+        # Convert WGS84 coordinates to COSMO rotated pole coordinates
+        coords_rad_in_COSMO = pc.WGS_to_COSMO(coords_radar,
+                                [proj_COSMO['Latitude_of_southern_pole'],
+                                proj_COSMO['Longitude_of_southern_pole']])
 
-    llc_COSMO = (float(proj_COSMO['Lo1']), float(proj_COSMO['La1']))
-    res_COSMO = N.attributes['resolution']
+        llc_COSMO = (float(proj_COSMO['Lo1']), float(proj_COSMO['La1']))
+        res_COSMO = N.attributes['resolution']
 
-    # Get index of radar in COSMO rotated pole coordinates
-    pos_radar_bin = [(coords_rad_in_COSMO[0]-llc_COSMO[1]) / res_COSMO[1],
-                    (coords_rad_in_COSMO[1]-llc_COSMO[0]) / res_COSMO[0]]
+        # Get index of radar in COSMO rotated pole coordinates
+        pos_radar_bin = [(coords_rad_in_COSMO[0]-llc_COSMO[1]) / res_COSMO[1],
+                        (coords_rad_in_COSMO[1]-llc_COSMO[0]) / res_COSMO[0]]
+    elif model == 'WRF':
+        # Get info about WRF coordinate system
+        proj_WRF = N.attributes['proj_info']
+        # Convert WGS84 coordinates to WRF rotated pole coordinates
+        coords_rad_in_WRF = pc.WGS_to_WRF(coords_radar, proj_WRF)
+
+        llc_WRF = (float(proj_WRF['I1']), float(proj_WRF['J1']))
+        res_WRF = [1., 1.]
+
+        # Get index of radar in WRF rotated pole coordinates
+        pos_radar_bin = [(coords_rad_in_WRF[0]-llc_WRF[1]) / res_WRF[1],
+                        (coords_rad_in_WRF[1]-llc_WRF[0]) / res_WRF[0]]
 
     # Get refractive index profile from refractivity estimated from COSMO variables
     n_vert_profile = 1 + (N.data[:,int(np.round(pos_radar_bin[0])),
@@ -119,7 +134,7 @@ def _ref_ODE(range_vec, elevation_angle, coords_radar, N):
     # Get earth radius at radar latitude
     RE = get_earth_radius(coords_radar[0])
 
-    if CONFIG['radar']['type']  == 'ground':
+    if CONFIG['radar']['type']  == 'ground' and model == 'COSMO':
         # Invert to get from ground to top of model domain, COSMO first vert.
         # layer is the highest one...
         h = h[::-1]

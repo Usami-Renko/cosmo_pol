@@ -18,6 +18,7 @@ np.seterr(divide='ignore') # Disable divide by zero error
 import pyproj
 import pickle
 import pycosmo as pc
+import pyWRF as pw
 import scipy.interpolate as interp
 from scipy.ndimage import gaussian_filter
 from textwrap import dedent
@@ -383,7 +384,7 @@ def get_interpolated_radial(dic_variables, azimuth, elevation, N = None,
                     # GH coordinates
                     pt = [pts_hor[i]+azimuth, pts_ver[j]+elevation]
                     # Interpolate beam
-                    lats,lons,list_vars = trilin_interp_radial(list_variables,
+                    lats,lons,list_vars = trilin_interp_radial_WRF(list_variables,
                                                       pts_hor[i]+azimuth,
                                                       list_refraction[j][0],
                                                       list_refraction[j][1])
@@ -453,7 +454,7 @@ def get_interpolated_radial(dic_variables, azimuth, elevation, N = None,
                                                         refraction_method,
                                                         N)
 
-                lats, lons, list_vars = trilin_interp_radial(list_variables,
+                lats, lons, list_vars = trilin_interp_radial_WRF(list_variables,
                                                           list_pts[i][0],
                                                           s,
                                                           h)
@@ -594,3 +595,115 @@ def trilin_interp_radial(list_vars, azimuth, distances_profile, heights_profile)
 
     return lats_rad, lons_rad, interp_data
 
+def trilin_interp_radial_WRF(list_vars, azimuth, distances_profile, heights_profile):
+    """
+    Interpolates a radar radial using a specified quadrature and outputs
+    a list of subradials (WRF interface)
+    Args:
+        list_vars: list of WRF variables to be interpolated
+        azimuth: the azimuth angle in degrees (phi) of the subradial
+        distances_profile: vector of distances in meters of all gates
+            along the subradial (computed with the atmospheric refraction
+            scheme)
+        heights_profile: vector of heights above ground in meters of all
+            gates along the subradial (computed with the atmospheric refraction
+            scheme)
+    Returns:
+        lats_rad: vector of all latitudes along the subradial
+        lons_rad: vector of all longitudes along the subradial
+        interp_data: dictionary containing all interpolated variables along
+            the subradial
+    """
+
+    # Get position of virtual radar from user configuration
+    from cosmo_pol.config.cfg import CONFIG
+    radar_pos = CONFIG['radar']['coords']
+
+
+    # Initialize WGS84 geoid
+    g = pyproj.Geod(ellps='WGS84')
+
+    # Get radar bins coordinates
+    lons_rad=[]
+    lats_rad=[]
+    # Using the distance on ground of every radar gate, we get its latlon coordinates
+    for d in distances_profile:
+        # Note that pyproj uses lon/lat whereas I used lat/lon
+        lon,lat,ang=g.fwd(radar_pos[1], radar_pos[0], azimuth,d)
+        lons_rad.append(lon)
+        lats_rad.append(lat)
+
+    # Convert to numpy array
+    lons_rad = np.array(lons_rad)
+    lats_rad = np.array(lats_rad)
+
+    # Initialize interpolated variables
+    interp_data = []
+    isbot_rad = np.ones(len(distances_profile), dtype=bool)
+    istop_rad = np.ones(len(distances_profile), dtype=bool)
+
+    for i,var in enumerate(list_vars):
+
+        # Get model heights and WRF proj from that variable
+        model_heights = var.attributes['z-levels']
+        model_topo = var.attributes['topograph']
+
+        # WRF index coordinates on lambert projection face
+        proj_WRF=var.attributes['proj_info']
+
+        # Get lower left corner of WRF domain in local index coordinates
+        llc_WRF=(float(proj_WRF['I1']), float(proj_WRF['J1']))
+        llc_WRF=np.asarray(llc_WRF).astype('float32')
+
+        # Get upper right corner of WRF domain in local index coordinates
+        urc_WRF=(float(proj_WRF['I2']), float(proj_WRF['J2']))
+        urc_WRF=np.asarray(urc_WRF).astype('float32')
+        
+        # Get resolution
+        res_WRF = [1., 1.]
+
+        # Transform radar gate coordinates into local wrf coordinates
+        coords_rad_loc = pw.WGS_to_WRF((lats_rad,lons_rad), proj_WRF)
+
+        # Check if all points are within WRF domain
+        if np.any(coords_rad_loc[:,1]<llc_WRF[0]) or\
+            np.any(coords_rad_loc[:,0]<ll_WRF[1]) or \
+                np.any(coords_rad_loc[:,1]>urc_WRF[0]) or \
+                    np.any(coords_rad_loc[:,0]>urc_WRF[1]):
+                        msg = """
+                        ERROR: RADAR DOMAIN IS NOT ENTIRELY CONTAINED IN WRF
+                        SIMULATION DOMAIN: ABORTING
+                        """
+                        raise(IndexError(dedent(msg)))
+
+        # Now we interpolate all variables along beam using C-code file
+        ###########################################################################
+        rad_interp_values = np.zeros(len(distances_profile),)*float('nan')
+        model_data = var.data
+
+        # do some transpose and reverse to fit the cosmo data format
+        model_heights = np.transpose(model_heights[::-1,...], axes=(0, 2, 1))
+        model_data = np.transpose(model_data[::-1,...], axes=(0, 2, 1))
+        model_topo = np.transpose(model_topo, axes=(1, 0))
+
+        arguments_c_code = (len(distances_profile),
+                            coords_rad_loc,
+                            heights_profile,
+                            model_data,
+                            model_heights,
+                            model_topo,
+                            llc_WRF,
+                            res_WRF)
+        
+        rad_interp_values = get_all_radar_pts(*arguments_c_code)
+        interp_data.append(rad_interp_values[1][:])
+
+        isbot_rad &= ~np.isnan(rad_interp_values[1][:])
+        istop_rad &= ~(rad_interp_values[1][:]==-9999)
+    
+    # remove those partially valid radar gates
+    for i,var in enumerate(list_vars):
+        interp_data[i][~isbot_rad] = np.nan
+        interp_data[i][~istop_rad] = -9999
+
+    return lats_rad, lons_rad, interp_data

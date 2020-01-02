@@ -65,14 +65,15 @@ DEFAULTS={
         'na_GL':7},\
     'doppler':
         {'scheme':1,\
-        'turbulence_correction':0,
+        'turbulence_correction':0,\
         'motion_correction':0},\
     'microphysics':
         {'scheme':'1mom',\
          'with_melting': 0,\
          'with_ice_crystals':1,\
          'with_attenuation': 1,\
-         'scattering':'tmatrix_masc'},\
+         'scattering':'tmatrix_masc',\
+         'folder_lut':None}\
     }
 
 '''
@@ -114,7 +115,8 @@ VALID_VALUES={
         'with_ice_crystals':[0,1],\
         'with_melting':[0,1],\
         'with_attenuation':[0,1],\
-        'scattering':['tmatrix_masc','tmatrix','dda']}\
+        'scattering':['tmatrix_masc','tmatrix','dda'],\
+        'folder_lut': [None, str]}\
     }
 
 
