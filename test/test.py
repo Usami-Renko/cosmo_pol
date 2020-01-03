@@ -5,7 +5,7 @@
 @Author: Hejun Xie
 @Date: 2020-01-02 19:42:04
 @LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-03 22:25:05
+@LastEditTime : 2020-01-03 23:26:01
 '''
 
 import cosmo_pol
@@ -68,17 +68,25 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     plt.figure()
 
-    display.plot_ppi_map('ZH', 0, vmin=-5, vmax=70,
-                     min_lon=119, max_lon=124, min_lat=26, max_lat=30,
-                     lon_lines=np.arange(119, 124, 1), projection='lcc',
-                     lat_lines=np.arange(25, 30, 1), resolution='h',
+    display.plot_ppi_map('ZH', 0, vmin=-5, vmax=60,
+                     min_lon=119, max_lon=122.5, min_lat=26.3, max_lat=29.5,
+                     lon_lines=np.arange(119, 122.7, 1), projection='lcc',
+                     lat_lines=np.arange(26.3, 29.5, 1), resolution='h',
                      lat_0=r.latitude['data'],
-                     lon_0=r.longitude['data'])
+                     lon_0=r.longitude['data'],
+                     cmap='pyart_Carbone11',
+                     title='Horizontal reflectivity ZH [dBZ]')
     
     # plot range rings at 10, 20, 30 and 40km
-    display.plot_range_ring(50., line_style='k-')
-    display.plot_range_ring(100., line_style='k--')
-    display.plot_range_ring(150., line_style='k-')
+    display.plot_range_ring(50., line_style='k-', lw=1.0)
+    display.plot_range_ring(100., line_style='k--', lw=1.0)
+    display.plot_range_ring(150., line_style='k-', lw=1.0)
+
+    # plots cross hairs
+    display.plot_line_xy(np.array([-200000.0, 200000.0]), np.array([0.0, 0.0]),
+                        line_style='k-', lw=1.2)
+    display.plot_line_xy(np.array([0.0, 0.0]), np.array([-200000.0, 200000.0]),
+                        line_style='k-', lw=1.2)
 
     display.plot_point(r.longitude['data'], r.latitude['data'])
     

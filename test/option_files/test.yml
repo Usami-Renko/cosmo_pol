@@ -1,6 +1,6 @@
 radar:
     type: 'ground'
-    coords: [28.4, 122.0, 40]
+    coords: [27.9, 120.8, 200]
     frequency: 5.6
     range: 150000
     radial_resolution: 150
