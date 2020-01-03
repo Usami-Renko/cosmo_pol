@@ -320,9 +320,9 @@ class PyartRadop(core.Radar):
         elevation={'data' :np.array(elevations, dtype = float)}
         fixed_angle['data'] = np.array(fixed_angle['data'], dtype = float)
         sweep_start_ray_index['data'] = np.array(sweep_start_ray_index['data'], 
-                             dtype = float)
+                             dtype = int)
         sweep_stop_ray_index['data'] = np.array(sweep_stop_ray_index['data'],
-                           dtype = float)
+                           dtype = int)
         
         '''
         Finally add ranges as an additional variable, for convenience in order
@@ -333,7 +333,7 @@ class PyartRadop(core.Radar):
         fields['rangearray']['data'] = np.tile(rrange['data'],(len(elevation['data']),1))
 
         metadata = {}
-        
+
 
         # Create PyART instance
         super(PyartRadop,self).__init__(time, rrange, fields, metadata,
