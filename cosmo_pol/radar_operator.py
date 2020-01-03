@@ -21,6 +21,7 @@ import copy
 import pycosmo as pc
 import pyWRF as pw
 import gc
+import pickle
 from textwrap import dedent
 
 # Local imports
@@ -309,7 +310,7 @@ class RadarOperator(object):
                 self.config['microphysics']['scheme'] = self.current_microphys_scheme
         del loaded_vars
     
-    def load_model_file_WRF(self, filename, itime=0):
+    def load_model_file_WRF(self, filename, itime=0, load_pickle=False, pickle_file=None):
         '''
         Loads data from a WRF file, which is a pre-requirement for
         simulating radar observables
@@ -363,9 +364,19 @@ class RadarOperator(object):
         # Read variables from GRIB file
         print('Reading variables ' + str(vars_to_load) + ' from file')
 
-        loaded_vars = file_h.get_variable(vars_to_load, itime=itime, get_proj_info=True,
-                                          shared_heights=False,assign_heights=True)
-        
+        if not load_pickle:
+            loaded_vars = file_h.get_variable(vars_to_load, itime=itime, get_proj_info=True,
+                                            shared_heights=False,assign_heights=True)
+            
+            # To deal with annoying issues with pickle
+            for var in loaded_vars.values():
+                var.file = None
+            with open(pickle_file, "wb") as f:
+                pickle.dump(loaded_vars, f)
+        else:
+            with open(pickle_file, "rb") as f:
+			    loaded_vars = pickle.load(f)
+
         self.dic_vars = loaded_vars #  Assign to class
         if 'N' in loaded_vars.keys():
             self.N=loaded_vars['N']
@@ -429,6 +440,74 @@ class RadarOperator(object):
         pyrad_instance = PyartRadop(simulated_sweep)
         return  pyrad_instance
 
+    def get_PPI_test(self, elevations, azimuths = None, az_step = None, az_start = 0,
+                az_stop = 359):
+        '''
+        Simulates a PPI scan based on the user configuration (For single thread test)
+        Args:
+            elevations: a single scalar or a list of elevation angles in
+                degrees. If a list is provided, the output will consist
+                of several PPI scans (sweeps in the PyART class)
+            azimuths: (Optional) a list of azimuth angles in degrees
+            az_start az_step, az_stop: (Optional) If 'azimuths' is undefined
+                these three arguments will be used to create a list of azimuths
+                angles. Defaults are (0, 3dB_beamwidth, 359)
+        Returns:
+            A PPI profile at the specified elevation(s), in the form of a PyART
+            class. To every elevation angle corresponds at sweep
+        '''
+        # Check if model file has been loaded
+        if self.dic_vars=={}:
+            print('No model file has been loaded! Aborting...')
+            return
+
+        # Check if list of elevations is scalar
+        if np.isscalar(elevations):
+            elevations=[elevations]
+
+        # Needs to be done in order to deal with Multiprocessing's annoying limitations
+        global dic_vars, N, lut_sz, output_variables
+        dic_vars, N, lut_sz, output_variables = self.define_globals()
+        # Define list of angles that need to be resolved
+        if az_step == None:
+            az_step=self.config['radar']['3dB_beamwidth']
+
+        # Define list of angles that need to be resolved
+        if np.any(azimuths == None):
+            # Define azimuths and ranges
+            if az_start>az_stop:
+                azimuths=np.hstack((np.arange(az_start, 360., az_step),
+                                    np.arange(0, az_stop + az_step, az_step)))
+            else:
+                azimuths=np.arange(az_start, az_stop + az_step, az_step)
+
+        # Define  ranges
+        rranges = constants.RANGE_RADAR
+
+        # Initialize computing pool
+        def worker(elev, azimuth):#
+            print(azimuth)
+            list_subradials = get_interpolated_radial(dic_vars,
+                                                    azimuth,
+                                                    elev,
+                                                    N)
+            if output_variables in ['all','only_radar']:
+                output = get_radar_observables(list_subradials, lut_sz)
+                print(output.values)
+            if output_variables == 'only_model':
+                output =  integrate_radials(list_subradials)
+            elif output_variables == 'all':
+                output = combine_subradials((output,
+                            integrate_radials(list_subradials)))
+
+            return output
+
+        list_beams = worker(elevations[0], azimuths[0])
+
+        del dic_vars
+        del N
+        del lut_sz
+        gc.collect()
 
     def get_PPI(self, elevations, azimuths = None, az_step = None, az_start = 0,
                 az_stop = 359):

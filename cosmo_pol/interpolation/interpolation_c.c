@@ -80,12 +80,22 @@ float* get_all_radar_pts(float *output, int len, float *coords_rad_pts, int crp_
                 closest_1=idx;
                 closest_2=idx+1;
             }
-            /*  printf("%d %d \n", n[0],n[1]);*/
             coords_neighbours[2*j]=slice_vert[closest_1];
             coords_neighbours[2*j+1]=slice_vert[closest_2];
             val_neighbours[2*j]=model_data[closest_1*md_z*md_y+n[0]*md_z+n[1]];
-            /* printf("%f %f \n",coords_neighbours[2*j], val_neighbours[2*j]); */
             val_neighbours[2*j+1]=model_data[closest_2*md_z*md_y+n[0]*md_z+n[1]];
+
+            // if(val_neighbours[2*j]>1e-6 || val_neighbours[2*j+1]>1e-6){
+            //     printf("%d %d \n", i, j);
+            //     /* print the grid index of the horizontal vertex*/
+            //     printf("%d %d \n", n[0],n[1]);
+            //     /* print the grid index of the vertical vertex*/
+            //     printf("%d %d \n", closest_1, closest_2);
+            //     /* print the height of vertical vertices */
+            //     printf("%f %f \n",coords_neighbours[2*j], coords_neighbours[2*j+1]);
+            //     /* print the value of vertical vertices */
+            //     printf("%f %f \n",val_neighbours[2*j], val_neighbours[2*j+1]);
+            // }
         }
 
         if(flag==2){ /* We hit the top of COSMO domain */

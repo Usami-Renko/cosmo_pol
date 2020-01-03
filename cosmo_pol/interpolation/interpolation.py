@@ -652,11 +652,11 @@ def trilin_interp_radial_WRF(list_vars, azimuth, distances_profile, heights_prof
         proj_WRF=var.attributes['proj_info']
 
         # Get lower left corner of WRF domain in local index coordinates
-        llc_WRF=(float(proj_WRF['I1']), float(proj_WRF['J1']))
+        llc_WRF=(float(0), float(0))
         llc_WRF=np.asarray(llc_WRF).astype('float32')
 
         # Get upper right corner of WRF domain in local index coordinates
-        urc_WRF=(float(proj_WRF['I2']), float(proj_WRF['J2']))
+        urc_WRF=(float(proj_WRF['nI'] - 1), float(proj_WRF['nJ'] - 1))
         urc_WRF=np.asarray(urc_WRF).astype('float32')
         
         # Get resolution
@@ -667,7 +667,7 @@ def trilin_interp_radial_WRF(list_vars, azimuth, distances_profile, heights_prof
 
         # Check if all points are within WRF domain
         if np.any(coords_rad_loc[:,1]<llc_WRF[0]) or\
-            np.any(coords_rad_loc[:,0]<ll_WRF[1]) or \
+            np.any(coords_rad_loc[:,0]<llc_WRF[1]) or \
                 np.any(coords_rad_loc[:,1]>urc_WRF[0]) or \
                     np.any(coords_rad_loc[:,0]>urc_WRF[1]):
                         msg = """
@@ -700,7 +700,7 @@ def trilin_interp_radial_WRF(list_vars, azimuth, distances_profile, heights_prof
 
         isbot_rad &= ~np.isnan(rad_interp_values[1][:])
         istop_rad &= ~(rad_interp_values[1][:]==-9999)
-    
+
     # remove those partially valid radar gates
     for i,var in enumerate(list_vars):
         interp_data[i][~isbot_rad] = np.nan
