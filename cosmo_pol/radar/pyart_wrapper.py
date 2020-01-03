@@ -318,7 +318,7 @@ class PyartRadop(core.Radar):
         azimuth={'data' : np.array(azimuths)}
         rrange={'data': scan['ranges']}
         elevation={'data' :np.array(elevations, dtype = float)}
-        fixed_angle['data'] = np.array(fixed_angle['data'], dtype = float)
+        fixed_angle['data'] = np.array([fixed_angle['data']], dtype = float)
         sweep_start_ray_index['data'] = np.array(sweep_start_ray_index['data'], 
                              dtype = int)
         sweep_stop_ray_index['data'] = np.array(sweep_stop_ray_index['data'],
