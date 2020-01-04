@@ -5,7 +5,7 @@
 @Author: Hejun Xie
 @Date: 2020-01-02 19:42:04
 @LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-03 23:26:01
+@LastEditTime : 2020-01-04 14:08:31
 '''
 
 import cosmo_pol
@@ -14,7 +14,8 @@ import pyart
 import numpy as np
 
 LOAD_MODEL = True
-LOAD_RADAR = True
+LOAD_RADAR = False
+DEG = r'$^\circ$'
 
 if __name__ == '__main__':
     FILENAME = '../pathos/WRF/wsm6/wrfout_d03_2013-10-06_00_00_00'
@@ -63,6 +64,7 @@ if __name__ == '__main__':
 
     # plt.savefig('rvel_unaliased.png',dpi=300,bbox_inches='tight')
 
+    # plot PPI map
     from pyart.graph import RadarMapDisplayBasemap
     display = pyart.graph.RadarMapDisplayBasemap(r)
     import matplotlib.pyplot as plt
@@ -75,8 +77,9 @@ if __name__ == '__main__':
                      lat_0=r.latitude['data'],
                      lon_0=r.longitude['data'],
                      cmap='pyart_Carbone11',
-                     title='Horizontal reflectivity ZH [dBZ]')
-    
+                     title= 'Time: {}'.format(a.get_pos_and_time()['time']) + '\n' + \
+                            'Elevation: {}'.format(r.elevation['data'][0]) + DEG + '\n' + \
+                            r'$Z_{H}$')
     # plot range rings at 10, 20, 30 and 40km
     display.plot_range_ring(50., line_style='k-', lw=1.0)
     display.plot_range_ring(100., line_style='k--', lw=1.0)
@@ -88,9 +91,9 @@ if __name__ == '__main__':
     display.plot_line_xy(np.array([0.0, 0.0]), np.array([-200000.0, 200000.0]),
                         line_style='k-', lw=1.2)
 
-    display.plot_point(r.longitude['data'], r.latitude['data'])
+    # display.plot_point(r.longitude['data'], r.latitude['data'])
     
-    plt.savefig('ZH.png',dpi=300, bbox_inches='tight')
+    plt.savefig('ZH_N.png',dpi=300, bbox_inches='tight')
 
     # plt.figure()
     # display.plot('ZDR',0,vmin=0,vmax=4,

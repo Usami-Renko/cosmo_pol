@@ -413,6 +413,8 @@ def get_radar_observables(list_subradials, lut_sz):
         ZV_ATT *= nan_cumprod(10**(-0.1*AV*(radial_res/1000.))) # divide to get dist in km
         ZH_ATT *= nan_cumprod(10**(-0.1*AH*(radial_res/1000.)))
         ZDR = ZH_ATT / ZV_ATT
+        ZV = ZV_ATT
+        ZH = ZH_ATT
 
 
     if simulate_doppler:

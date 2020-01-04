@@ -26,6 +26,6 @@ microphysics:
     scheme: '1mom'
     with_melting: 0
     with_ice_crystals: 1
-    with_attenuation: 1
+    with_attenuation: 0
     scattering: 'tmatrix_masc'
     folder_lut: '../pathos/lut/'

@@ -115,9 +115,9 @@ def _ref_ODE(range_vec, elevation_angle, coords_radar, N, model='WRF'):
         # Get info about WRF coordinate system
         proj_WRF = N.attributes['proj_info']
         # Convert WGS84 coordinates to WRF rotated pole coordinates
-        coords_rad_in_WRF = pc.WGS_to_WRF(coords_radar, proj_WRF)
+        coords_rad_in_WRF = pw.WGS_to_WRF(coords_radar, proj_WRF)
 
-        llc_WRF = (float(proj_WRF['I1']), float(proj_WRF['J1']))
+        llc_WRF = (0., 0.)
         res_WRF = [1., 1.]
 
         # Get index of radar in WRF rotated pole coordinates

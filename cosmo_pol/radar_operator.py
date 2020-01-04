@@ -493,7 +493,6 @@ class RadarOperator(object):
                                                     N)
             if output_variables in ['all','only_radar']:
                 output = get_radar_observables(list_subradials, lut_sz)
-                print(output.values)
             if output_variables == 'only_model':
                 output =  integrate_radials(list_subradials)
             elif output_variables == 'all':
