@@ -9,7 +9,7 @@ radar:
     sensitivity: [-15,10000]
     3dB_beamwidth: 1.
     K_squared: 0.93
-    nyquist_velocity: './option_files/nyquist_swiss_radars.txt'
+    nyquist_velocity: './option_files/nyquist_test.txt'
     antenna_speed: 0.2
 refraction:
     scheme: 1

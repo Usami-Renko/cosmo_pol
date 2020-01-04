@@ -5,7 +5,7 @@
 @Author: Hejun Xie
 @Date: 2020-01-02 19:42:04
 @LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-04 14:08:31
+@LastEditTime : 2020-01-04 15:23:50
 '''
 
 import cosmo_pol
@@ -14,8 +14,11 @@ import pyart
 import numpy as np
 
 LOAD_MODEL = True
-LOAD_RADAR = False
+LOAD_RADAR = True
 DEG = r'$^\circ$'
+
+cmap = {'ZH':'pyart_Carbone11', 'RVEL': 'pyart_BuOr8', 'ZDR': 'pyart_Carbone17',
+'KDP': 'pyart_EWilson17', 'PHIDP': 'pyart_Carbone42', 'RHOHV': 'pyart_GrMg16'}
 
 if __name__ == '__main__':
     FILENAME = '../pathos/WRF/wsm6/wrfout_d03_2013-10-06_00_00_00'
@@ -41,9 +44,9 @@ if __name__ == '__main__':
 
     # plt.savefig('rvel_aliased.png',dpi=300,bbox_inches='tight')
 
-    cc = a.config
-    cc['radar']['nyquist_velocity']=None
-    a.config = cc
+    # cc = a.config
+    # cc['radar']['nyquist_velocity']='./option_files/nyquist_test.txt'
+    # a.config = cc
 
     if not LOAD_RADAR:
         r = a.get_PPI(elevations = 1)
@@ -70,16 +73,18 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     plt.figure()
 
-    display.plot_ppi_map('ZH', 0, vmin=-5, vmax=60,
+    field = 'RHOHV'
+    vrange = (0.96, 1)
+    display.plot_ppi_map(field, 0, vmin=vrange[0], vmax=vrange[1],
                      min_lon=119, max_lon=122.5, min_lat=26.3, max_lat=29.5,
                      lon_lines=np.arange(119, 122.7, 1), projection='lcc',
                      lat_lines=np.arange(26.3, 29.5, 1), resolution='h',
                      lat_0=r.latitude['data'],
                      lon_0=r.longitude['data'],
-                     cmap='pyart_Carbone11',
+                     cmap=cmap[field],
                      title= 'Time: {}'.format(a.get_pos_and_time()['time']) + '\n' + \
                             'Elevation: {}'.format(r.elevation['data'][0]) + DEG + '\n' + \
-                            r'$Z_{H}$')
+                            r'$\rho_{HV}$')
     # plot range rings at 10, 20, 30 and 40km
     display.plot_range_ring(50., line_style='k-', lw=1.0)
     display.plot_range_ring(100., line_style='k--', lw=1.0)
@@ -93,7 +98,7 @@ if __name__ == '__main__':
 
     # display.plot_point(r.longitude['data'], r.latitude['data'])
     
-    plt.savefig('ZH_N.png',dpi=300, bbox_inches='tight')
+    plt.savefig('RHOHV.png',dpi=300, bbox_inches='tight')
 
     # plt.figure()
     # display.plot('ZDR',0,vmin=0,vmax=4,
