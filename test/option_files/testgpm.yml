@@ -1,0 +1,19 @@
+radar:
+    type: 'GPM'
+    coords: [0., 0., 0.]
+    frequency: 35.6
+    K_squared: 0.93
+refraction:
+    scheme: 1
+integration:
+    scheme: 1
+    nh_GH: 1
+    nv_GH: 1
+    weight_threshold: 0.999
+microphysics:
+    scheme: '1mom'
+    with_melting: 0
+    with_ice_crystals: 1
+    with_attenuation: 0
+    scattering: 'tmatrix_masc'
+    folder_lut: '../pathos/lut/'

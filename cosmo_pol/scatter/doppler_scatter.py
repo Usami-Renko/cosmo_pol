@@ -405,16 +405,11 @@ def get_radar_observables(list_subradials, lut_sz):
 
     PHIDP = nan_cumsum(2 * KDP) * radial_res/1000. + DELTA_HV
 
-    ZV_ATT = ZV.copy()
-    ZH_ATT = ZH.copy()
-
     if att_corr:
         # AH and AV are in dB so we need to convert them to linear
-        ZV_ATT *= nan_cumprod(10**(-0.1*AV*(radial_res/1000.))) # divide to get dist in km
-        ZH_ATT *= nan_cumprod(10**(-0.1*AH*(radial_res/1000.)))
-        ZDR = ZH_ATT / ZV_ATT
-        ZV = ZV_ATT
-        ZH = ZH_ATT
+        ZV *= nan_cumprod(10**(-0.1*AV*(radial_res/1000.))) # divide to get dist in km
+        ZH *= nan_cumprod(10**(-0.1*AH*(radial_res/1000.)))
+        ZDR = ZH / ZV
 
 
     if simulate_doppler:

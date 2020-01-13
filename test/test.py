@@ -5,7 +5,7 @@
 @Author: Hejun Xie
 @Date: 2020-01-02 19:42:04
 @LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-04 15:23:50
+@LastEditTime : 2020-01-13 10:02:25
 '''
 
 import cosmo_pol
@@ -14,7 +14,7 @@ import pyart
 import numpy as np
 
 LOAD_MODEL = True
-LOAD_RADAR = True
+LOAD_RADAR = False
 DEG = r'$^\circ$'
 
 cmap = {'ZH':'pyart_Carbone11', 'RVEL': 'pyart_BuOr8', 'ZDR': 'pyart_Carbone17',
@@ -73,8 +73,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     plt.figure()
 
-    field = 'RHOHV'
-    vrange = (0.96, 1)
+    field = 'ZH'
+    vrange = (0, 60)
     display.plot_ppi_map(field, 0, vmin=vrange[0], vmax=vrange[1],
                      min_lon=119, max_lon=122.5, min_lat=26.3, max_lat=29.5,
                      lon_lines=np.arange(119, 122.7, 1), projection='lcc',
@@ -84,7 +84,7 @@ if __name__ == '__main__':
                      cmap=cmap[field],
                      title= 'Time: {}'.format(a.get_pos_and_time()['time']) + '\n' + \
                             'Elevation: {}'.format(r.elevation['data'][0]) + DEG + '\n' + \
-                            r'$\rho_{HV}$')
+                            r'$Z_{H}$')
     # plot range rings at 10, 20, 30 and 40km
     display.plot_range_ring(50., line_style='k-', lw=1.0)
     display.plot_range_ring(100., line_style='k--', lw=1.0)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
 
     # display.plot_point(r.longitude['data'], r.latitude['data'])
     
-    plt.savefig('RHOHV.png',dpi=300, bbox_inches='tight')
+    plt.savefig('ZH.png',dpi=300, bbox_inches='tight')
 
     # plt.figure()
     # display.plot('ZDR',0,vmin=0,vmax=4,

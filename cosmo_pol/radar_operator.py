@@ -169,6 +169,7 @@ class RadarOperator(object):
         has_melting = self.config['microphysics']['with_melting']
         scattering_method = self.config['microphysics']['scattering']
         freq = self.config['radar']['frequency']
+        # freq = 5.6
         folder_lut = self.config['microphysics']['folder_lut']
 
         list_hydrom = ['R','S','G']
@@ -702,11 +703,12 @@ class RadarOperator(object):
             pyrad_instance = PyartRadop('rhi',simulated_sweep)
             return  pyrad_instance
 
-    def get_GPM_swath(self, GPM_file, band = 'Ku'):
+    def get_GPM_swath(self, GPM_file, slice, band = 'Ku'):
         '''
         Simulates a GPM swath
         Args:
             GPM_file: a GPM-DPR file in the HDF5 format
+            slice: slice of the GPM pixels in model domain
             band: can be either 'Ka', 'Ku', 'Ku_matched', 'Ka_matched'
                 'Ka' will be at the location of the HS (high sensitivity)
                 coordinates and at 35.6 GHz
@@ -741,13 +743,13 @@ class RadarOperator(object):
             constants.GPM_RADIAL_RES_KA if band == 'Ka' \
                 else constants.GPM_RADIAL_RES_KU
 
-        self.update_config(cfg_copy, check = False)
+        self.config = cfg_copy
 
         # Needs to be done in order to deal with Multiprocessing's annoying limitations
         global dic_vars, N, lut_sz, output_variables
         dic_vars, N, lut_sz, output_variables = self.define_globals()
 
-        az,elev,rang,coords_GPM = get_GPM_angles(GPM_file,band)
+        az,elev,rang,coords_GPM = get_GPM_angles(GPM_file, band, slice)
         # Initialize computing pool
         pool = mp.Pool(processes = mp.cpu_count(), maxtasksperchild=1)
         m = mp.Manager()
@@ -757,6 +759,7 @@ class RadarOperator(object):
         def worker(event,params):
             try:
                 if not event.is_set():
+                    # print(params)
                     azimuth=params[0]
                     elev=params[1]
 
@@ -829,6 +832,114 @@ class RadarOperator(object):
                                                 dim_swath,
                                                 band)
             return list_beams_formatted
+    
+    def get_GPM_swath_test(self, GPM_file, islice, ipixel, band = 'Ku'):
+        '''
+        Simulates a GPM swath
+        Args:
+            GPM_file: a GPM-DPR file in the HDF5 format
+            band: can be either 'Ka', 'Ku', 'Ku_matched', 'Ka_matched'
+                'Ka' will be at the location of the HS (high sensitivity)
+                coordinates and at 35.6 GHz
+                'Ka_matched' will be at the location of the MS (matched scan)
+                coordinates and at 35.6 GHz
+                'Ku' will be at the location of the NS (high sensitivity)
+                coordinates and at 13.6 GHz
+                'Ku_matched' will be at the location of the MS (matched scan)
+                coordinates and at 13.6 GHz
+
+        Returns:
+            An instance of the SimulatedGPM class (see gpm_wrapper.py) which
+            contains the simulated radar observables at the coordinates in
+            the GPM file
+        '''
+        # Check if model file has been loaded
+        if self.dic_vars=={}:
+            print('No model file has been loaded! Aborting...')
+            return
+
+        # Assign correct frequencies and 3dB beamwidth, whatever user config
+        cfg_copy = copy.deepcopy(self.config)
+        if band == 'Ku' or band == 'Ku_matched':
+            cfg_copy['radar']['frequency'] = constants.GPM_KU_FREQUENCY
+        elif band == 'Ka' or band == 'Ka_matched':
+            cfg_copy['radar']['frequency'] = constants.GPM_KA_FREQUENCY
+
+        cfg_copy['radar']['3dB_beamwidth'] = constants.GPM_3DB_BEAMWIDTH
+        cfg_copy['radar']['sensitivity'] = constants.GPM_SENSITIVITY
+        cfg_copy['radar']['type'] = 'GPM'
+        cfg_copy['radar']['radial_resolution'] = \
+            constants.GPM_RADIAL_RES_KA if band == 'Ka' \
+                else constants.GPM_RADIAL_RES_KU
+
+        self.config = cfg_copy
+
+        # Needs to be done in order to deal with Multiprocessing's annoying limitations
+        global dic_vars, N, lut_sz, output_variables
+        dic_vars, N, lut_sz, output_variables = self.define_globals()
+
+        az,elev,rang,coords_GPM = get_GPM_angles(GPM_file,band)
+
+        def worker(params):
+            print(params)
+            azimuth=params[0]
+            elev=params[1]
+
+            """ For some reason modifying self.config instead of
+            cfg.CONFIG throws in error about not being able to pickle
+            the pycosmo variables. This is indeed very weird and I
+            have not been able to figure out why...However since
+            self.config is just a shallow copy of cfg.CONFIG, it doesn't
+            really matter...
+            """
+
+            # Update GPM position and range vector
+            cfg.CONFIG['radar']['range'] = params[2]
+            cfg.CONFIG['radar']['coords'] = [params[3],
+                                            params[4],
+                                            params[5]]
+
+            list_subradials = get_interpolated_radial(dic_vars,
+                                                        azimuth,
+                                                        elev,N = N)
+
+            # print(list_subradials[0].values)
+            print(list_subradials[0].lats_profile)
+            print(list_subradials[0].lons_profile)
+            # print(list_subradials[0].dist_profile)
+            # print(list_subradials[0].heights_profile)
+            # print(list_subradials[0].elev_profile)
+
+
+            if output_variables in ['all','only_radar']:
+                output = get_radar_observables(list_subradials,lut_sz)
+            if output_variables == 'only_model':
+                output =  integrate_radials(list_subradials)
+            elif output_variables == 'all':
+                output = combine_subradials((output,
+                        integrate_radials(list_subradials)))
+            
+            # print(output.values)
+            # print(output.lats_profile)
+            # print(output.lons_profile)
+            # print(output.dist_profile)
+            # print(output.heights_profile)
+            # print(output.elev_profile)
+
+            return output
+            
+        dim_swath = az.shape
+
+        c0 = coords_GPM[islice,0]
+        c1 = coords_GPM[islice,1]
+        c2 = coords_GPM[islice,2]
+
+        output = worker([az[islice, ipixel], elev[islice, ipixel], rang[islice, ipixel], c0, c1, c2])
+
+        del dic_vars
+        del N
+        del lut_sz
+        gc.collect()
 
 
 if __name__ == '__main__':

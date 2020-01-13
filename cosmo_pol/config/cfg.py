@@ -42,7 +42,8 @@ error will be returned if no valid value is provided, ex. frequency
 
 DEFAULTS={
     'radar':
-        {'range':150000,\
+        {'type':'ground',\
+        'range':150000,\
         'radial_resolution':500,\
         'PRI':700,\
         'FFT_length':256,\
@@ -84,7 +85,8 @@ error will be returned if no valid value is provided, ex. frequency
 
 VALID_VALUES={
     'radar':
-        {'coords': TypeList([float, int],[3]),\
+        {'type': ['ground', 'GPM'],\
+        'coords': TypeList([float, int],[3]),\
         'frequency':[2.7,5.6,9.41,9.8,13.6,35.6],\
         'range': Range(5000,500000),\
         'radial_resolution': Range(25,5000),\

@@ -234,7 +234,7 @@ def _ref_4_3(range_vec, elevation_angle, coords_radar):
 
     return s,h,e
 
-def compute_trajectory_GPM(elevation):
+def compute_trajectory_GPM_deprecated(elevation):
     '''
     Computes the trajectory of a GPM beam along a specified radial,
     currently atmospheric refraction is not taken into account
@@ -283,5 +283,53 @@ def compute_trajectory_GPM(elevation):
     s = s.astype('float32')
     h = h.astype('float32')
     e = np.rad2deg(e.astype('float32'))
+
+    return s,h,e
+
+def compute_trajectory_GPM(elevation):
+    '''
+    Computes the trajectory of a GPM beam along a specified radial,
+    currently atmospheric refraction is not taken into account
+    Args:
+        elevation: elevation angle of the radial in degrees
+
+    Returns:
+        s: vector of distance at the ground along the radial [m]
+        h: vector of heights above ground along the radial [m]
+        e: vector of incident elevation angles along the radial [degrees]
+    '''
+
+    from cosmo_pol.config.cfg import CONFIG
+
+    # Get info about GPM satellite position
+    latitude = CONFIG['radar']['coords'][0]
+    altitude_radar = CONFIG['radar']['coords'][2]
+    max_range = CONFIG['radar']['range']
+    radial_resolution = CONFIG['radar']['radial_resolution']
+
+    elev_rad = np.deg2rad(elevation)
+
+    # For GPM refraction is simply ignored...
+    maxHeightCOSMO = constants.MAX_HEIGHT_COSMO
+    RE = get_earth_radius(latitude)
+    # Compute maximum range to target (using cosinus law in the triangle
+    # earth center-radar-target)
+
+    range_vec=np.arange(radial_resolution/2.,max_range,radial_resolution)
+
+    h = np.sqrt((altitude_radar + RE)**2 + range_vec**2 - 2*(altitude_radar + RE)*range_vec*np.sin(elev_rad)) - RE
+    alpha = np.arcsin((range_vec * np.cos(elev_rad)) / (RE + h))
+    s = RE * alpha
+    e = elevation - np.rad2deg(alpha)
+
+    in_lower_atm = [h < maxHeightCOSMO]
+
+    h = h[in_lower_atm]
+    s = s[in_lower_atm]
+    e = e[in_lower_atm]
+
+    s = s.astype('float32')
+    h = h.astype('float32')
+    e = e.astype('float32')
 
     return s,h,e

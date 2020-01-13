@@ -161,6 +161,7 @@ class Constant_class(object):
         # some missing global constant
         self.T_K_SQUARED = 283.15
         self.M_AIR = complex(1, 0) # Mair ~ 1
+        self.MAX_HEIGHT_COSMO = 20000. # [m]
 
         if CONFIG != None:
             #,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -183,7 +184,7 @@ class Constant_class(object):
             except:
                 # If it fails we won't need it anyway
                 pass
-            if CONFIG['radar']['type'] == 'ground':
+            if CONFIG['radar']['type'] in ['ground']:
                 self.RANGE_RADAR=np.arange(
                    CONFIG['radar']['radial_resolution']/2.,
                    CONFIG['radar']['range'],

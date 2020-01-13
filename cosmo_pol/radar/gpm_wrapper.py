@@ -69,6 +69,8 @@ class SimulatedGPM():
                     gates (also in vertical)
                 lons: a 3D array containing the longitudes at the all GPM
                     gates (also in vertical)
+                heights: a 3D array containing the heights at the all GPM
+                    gates (also in vertical)
                 data: a dictionary of 3D arrays with all simulated variables
 
         '''
@@ -91,7 +93,7 @@ class SimulatedGPM():
             j = idx - i * M
             try:
                 bin_surface[i,j] = len(list_beams_cp[idx].mask) - \
-                    np.where(list_beams_cp[idx].mask>=1)[0][0]
+                    np.where(list_beams_cp[idx].mask<0)[0]
             except:
                 bin_surface[i,j]=0
             for k in pol_vars:
@@ -104,30 +106,37 @@ class SimulatedGPM():
 
             list_beams_cp[idx].lons_profile =  \
                 list_beams_cp[idx].lons_profile[list_beams_cp[idx].mask > -1]
+            
+            list_beams_cp[idx].heights_profile =  \
+                list_beams_cp[idx].heights_profile[list_beams_cp[idx].mask > -1]
 
         # Length of longest beam
-        max_len=np.max([len(r.dist_profile) for r in list_radials])
+        max_len=np.max([len(r.heights_profile) for r in list_beams_cp])
 
         # Initalize output dictionary
         list_beams_formatted = {}
         for k in pol_vars:
-            list_beams_formatted[k]=np.zeros((N,M,max_len))
+            list_beams_formatted[k]=np.zeros((N,M,max_len))*float('nan')
         # Initialize lats and lons 3D array
 
         lats = np.zeros((N,M,max_len))*float('nan')
         lons = np.zeros((N,M,max_len))*float('nan')
+        heights = np.zeros((N,M,max_len))*float('nan')
 
         # Fill the output dictionary starting from the ground
         for idx in range(len(list_beams_cp)):
             i = int(np.floor(idx/M))
             j = idx - i * M
-            len_beam=len(list_beams_cp[idx].values[k])
+            len_beam=len(list_beams_cp[idx].heights_profile)
             # Flip because we want to start from the ground
             l = list_beams_cp[idx].lats_profile
             ll = list_beams_cp[idx].lons_profile
+            h = list_beams_cp[idx].heights_profile
 
             lats[i, j, 0:len_beam] = l[::-1]
             lons[i, j, 0:len_beam] = ll[::-1]
+            heights[i, j, 0:len_beam] = h[::-1]
+
             # Flip [::-1] because we want to start from the ground
             for k in pol_vars:
                 list_beams_formatted[k][i,j,0:len_beam] = \
@@ -137,6 +146,7 @@ class SimulatedGPM():
         self.band = band
         self.lats = lats
         self.lons = lons
+        self.heights = heights
         self.data = list_beams_formatted
         return
 
@@ -256,7 +266,7 @@ def compare_operator_with_GPM(simulated_GPM_swath, GPM_filename,
     return values_ground, values_everywhere, diff
 
 
-def get_GPM_angles(GPM_filename, band):
+def get_GPM_angles(GPM_filename, band, GPMslice=None):
     '''
     From as specified GPM DPR HDF5 file, gets the azimuth (phi), elevation
     (theta) angles and range bins for every radar radial
@@ -266,6 +276,7 @@ def get_GPM_angles(GPM_filename, band):
         GPM_filename: path of the corresponding GPM DPR file
         band: the desired simulated GPM band, can be either 'Ka', 'Ku',
             'Ka_matched' or 'Ku_matched'
+        GPMslice: slice of the GPM pixels in model domain 
     Returns:
         azimuths: all azimuths in the form of a 2D array [degrees]
         elevations: all elevation angles in the form of a 2D array [degrees]
@@ -277,15 +288,21 @@ def get_GPM_angles(GPM_filename, band):
 
     group = _get_group(band)
 
-    gpm_f = h5py.File(GPM_file,'r')
-    lat_2D = gpm_f[group]['Latitude'][:]
-    lon_2D = gpm_f[group]['Longitude'][:]
+    gpm_f = h5py.File(GPM_filename,'r')
+    
+    # make full slice
+    if GPMslice is None:
+        [N, M] = gpm_f[group]['Latitude'].shape
+        GPMslice = (slice(0, N+1), slice(0, M+1))
 
-    center_lat_sc = gpm_f[group]['navigation']['scLat'][:]
-    center_lon_sc = gpm_f[group]['navigation']['scLon'][:]
-    altitudes_sc = gpm_f[group]['navigation']['dprAlt'][:]
+    lat_2D = gpm_f[group]['Latitude'][GPMslice]
+    lon_2D = gpm_f[group]['Longitude'][GPMslice]
 
-    pos_sc = gpm_f[group]['navigation']['scPos'][:]
+    center_lat_sc = gpm_f[group]['navigation']['scLat'][GPMslice[0]]
+    center_lon_sc = gpm_f[group]['navigation']['scLon'][GPMslice[0]]
+    altitudes_sc = gpm_f[group]['navigation']['dprAlt'][GPMslice[0]]
+
+    pos_sc = gpm_f[group]['navigation']['scPos'][GPMslice[0]]
 
     azimuths = np.zeros(lat_2D.shape)
     ranges = np.zeros(lat_2D.shape)

@@ -355,7 +355,8 @@ def get_interpolated_radial(dic_variables, azimuth, elevation, N = None,
     # Initialize list of subradials
     list_subradials = []
     # create vector of bin positions
-    rranges = constants.RANGE_RADAR
+    if CONFIG['radar']['type'] == 'ground':
+        rranges = constants.RANGE_RADAR
 
     if integration_scheme not in [2,6]: # Only regular grids!
         if list_refraction == None: # Calculate refraction for vertical GH points
@@ -696,6 +697,14 @@ def trilin_interp_radial_WRF(list_vars, azimuth, distances_profile, heights_prof
                             res_WRF)
         
         rad_interp_values = get_all_radar_pts(*arguments_c_code)
+
+        # if var.name == 'QI_v':
+        #     print('QI_v')
+        #     print(rad_interp_values[1][:])
+        # if var.name == 'QR_v':
+        #     print('QR_v')
+        #     print(rad_interp_values[1][:])
+
         interp_data.append(rad_interp_values[1][:])
 
         isbot_rad &= ~np.isnan(rad_interp_values[1][:])
