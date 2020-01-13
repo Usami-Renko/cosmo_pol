@@ -5,7 +5,7 @@
 @Author: Hejun Xie
 @Date: 2020-01-12 16:42:47
 @LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-13 15:58:54
+@LastEditTime : 2020-01-13 16:14:09
 '''
 
 import cosmo_pol
@@ -22,6 +22,8 @@ DEG = r'$^\circ$'
 
 cmap = {'ZH':'pyart_Carbone11', 'RVEL': 'pyart_BuOr8', 'ZDR': 'pyart_Carbone17',
 'KDP': 'pyart_EWilson17', 'PHIDP': 'pyart_Carbone42', 'RHOHV': 'pyart_GrMg16'}
+clevels = {'ZH':range(50), 'ZDR':np.linspace(0., 3., 50)}
+units = {'ZH':'[dBZ]', 'ZDR':'[dBZ]'}
 
 if __name__ == '__main__':
     FILENAME = '../pathos/WRF/wsm6/wrfout_d03_2013-10-06_00_00_00'
@@ -47,24 +49,26 @@ if __name__ == '__main__':
     # print(r.heights[0,0,:])
     # print(r.data['ZH'][0,0,:])
 
+    var = 'ZH' 
+
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
     x = r.lons
     y = r.lats
     h = r.heights
-    z = 10*np.log10(r.data['ZH'])
-    levels = range(50)
+    z = 10*np.log10(r.data[var])
+    levels = clevels[var]
     
     zgrids = [5, 15, 25, 35]
 
     csets = []
     for zgrid in zgrids: 
         csets.append(ax.contourf(x[:,:,zgrid], y[:,:,zgrid], z[:,:,zgrid],
-        levels, offset=h[0,0,zgrid]/1000., cmap = cmap['ZH']))
+        levels, offset=h[0,0,zgrid]/1000., cmap = cmap[var]))
     
     cbar = fig.colorbar(csets[0])
-    cbar.ax.set_ylabel('[dBZ]')
+    cbar.ax.set_ylabel(units[var])
 
     ax.set_xlim(121, 123)
     ax.set_ylim(27.5, 30.0)
@@ -73,6 +77,6 @@ if __name__ == '__main__':
     ax.set_xlabel('longitude')
     ax.set_ylabel('latitude')
     ax.set_zlabel('heights [km]')
-    ax.set_title('GPM-DPR ZH')
+    ax.set_title('GPM-DPR ' + var)
 
     plt.show()
