@@ -5,7 +5,7 @@
 @Author: Hejun Xie
 @Date: 2020-01-12 16:42:47
 @LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-13 16:14:09
+@LastEditTime : 2020-01-13 16:17:00
 '''
 
 import cosmo_pol
@@ -22,7 +22,7 @@ DEG = r'$^\circ$'
 
 cmap = {'ZH':'pyart_Carbone11', 'RVEL': 'pyart_BuOr8', 'ZDR': 'pyart_Carbone17',
 'KDP': 'pyart_EWilson17', 'PHIDP': 'pyart_Carbone42', 'RHOHV': 'pyart_GrMg16'}
-clevels = {'ZH':range(50), 'ZDR':np.linspace(0., 3., 50)}
+clevels = {'ZH':range(50), 'ZDR':np.linspace(0., 0.1, 50)}
 units = {'ZH':'[dBZ]', 'ZDR':'[dBZ]'}
 
 if __name__ == '__main__':
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # print(r.heights[0,0,:])
     # print(r.data['ZH'][0,0,:])
 
-    var = 'ZH' 
+    var = 'ZDR' 
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
