@@ -4,8 +4,8 @@
 @Description: 
 @Author: Hejun Xie
 @Date: 2020-01-02 19:42:04
-@LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-13 10:02:25
+@LastEditors: Hejun Xie
+@LastEditTime: 2020-04-21 17:04:52
 '''
 
 import cosmo_pol
@@ -51,10 +51,10 @@ if __name__ == '__main__':
     if not LOAD_RADAR:
         r = a.get_PPI(elevations = 1)
         with open("./tempr2.pkl", "wb") as f:
-			pickle.dump(r, f)
+            pickle.dump(r, f)
     else:
         with open("./tempr2.pkl", "rb") as f:
-			r = pickle.load(f)
+            r = pickle.load(f)
             
     # from cosmo_pol.radar.pyart_wrapper import RadarDisplay
     # display = RadarDisplay(r, shift=(0.0, 0.0))
