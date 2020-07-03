@@ -4,8 +4,8 @@
 @Description: Test GPM swath simulation
 @Author: Hejun Xie
 @Date: 2020-01-12 16:42:47
-@LastEditors  : Hejun Xie
-@LastEditTime : 2020-01-13 16:17:00
+@LastEditors: Hejun Xie
+@LastEditTime: 2020-04-21 17:12:46
 '''
 
 import cosmo_pol
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # print(r.heights[0,0,:])
     # print(r.data['ZH'][0,0,:])
 
-    var = 'ZDR' 
+    var = 'ZH' 
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
